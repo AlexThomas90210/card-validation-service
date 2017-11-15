@@ -1,16 +1,19 @@
 package models;
 
+import javax.persistence.Entity;
+
 /**
  * Class for the events & associated information that the system handles
  */
+@Entity
 public class Event {
-    private String panelId = null;
-    private String cardId = null;
-    private Boolean accessAllowed = null;
-    private Integer timestamp = null;
-    private Location location = null;
+    private String panelId;
+    private String cardId;
+    private Boolean accessAllowed;
+    private long timestamp;
+    private Location location;
 
-    public Event(String panelId, String cardId, Boolean accessAllowed, Integer timestamp, Location location){
+    public Event(String panelId, String cardId, Boolean accessAllowed, long timestamp, Location location){
         this.panelId = panelId;
         this.cardId = cardId;
         this.accessAllowed = accessAllowed;
@@ -42,7 +45,7 @@ public class Event {
         this.accessAllowed = accessAllowed;
     }
 
-    public Integer getTimestamp() {
+    public long getTimestamp() {
         return timestamp;
     }
 

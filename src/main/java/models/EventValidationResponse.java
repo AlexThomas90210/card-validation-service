@@ -16,6 +16,13 @@ public class EventValidationResponse {
         this.previousEvent = previousEvent;
     }
 
+    public EventValidationResponse(LocationAnalysisResult locationAnalysis, Event currentEvent, Event previousEvent) {
+        this.validEvent = locationAnalysis.getValid();
+        this.reason = locationAnalysis.getReason();
+        this.currentEvent = currentEvent;
+        this.previousEvent = previousEvent;
+    }
+
     public Boolean getValidEvent() {
         return validEvent;
     }
