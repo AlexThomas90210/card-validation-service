@@ -1,0 +1,62 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Master stack which calls other cloudformation templates to create a pipeline with GitHub, CodePipeline, CodeBuild which deploys to a created ElasticBeanstalk environment, Additionally a private VPC, RDS and Elasticache cluster is setup'
+
+Parameters:
+  EBKeyPair:
+    Description: SSH Keypair for instances
+    Type: AWS::EC2::KeyPair::KeyName
+
+Resources:
+  VpcStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./vpc-template.yaml
+      TimeoutInMinutes: '30'
+
+  RdsStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./rds-template.yaml
+      TimeoutInMinutes: '30'
+      Parameters:
+        VPC: !GetAtt VpcStack.Outputs.VPC
+        Subnets: !GetAtt VpcStack.Outputs.PrivateSubnets
+        WebServerSecurityGroup: !GetAtt EbStack.Outputs.Ec2SecurityGroup
+
+  EbStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./eb-template.yaml
+      TimeoutInMinutes: '30'
+      Parameters:
+        VPC: !GetAtt VpcStack.Outputs.VPC
+        Subnets: !GetAtt VpcStack.Outputs.PublicSubnets
+        KeyPairName: !Ref EBKeyPair
+
+  ElastiCacheStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./elasticache-template.yaml
+      TimeoutInMinutes: '30'
+      Parameters:
+        VPC: !GetAtt VpcStack.Outputs.VPC
+        Subnets: !GetAtt VpcStack.Outputs.PrivateSubnets
+        WebServerSecurityGroup: !GetAtt EbStack.Outputs.Ec2SecurityGroup
+
+  PipelineStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./pipeline-template.yaml
+      TimeoutInMinutes: '30'
+      Parameters:
+        ElasticBeanstalkApplication: !GetAtt EbStack.Outputs.ElasticBeanstalkApplication
+        ElasticBeanstalkEnvironment: !GetAtt EbStack.Outputs.ElasticBeanstalkEnvironment
+
+  # DnsStack:
+  #   Type: AWS::CloudFormation::Stack
+  #   Properties:
+  #     TemplateURL: ./dns-template.yaml
+  #     TimeoutInMinutes: '30'
+
+# Outputs:

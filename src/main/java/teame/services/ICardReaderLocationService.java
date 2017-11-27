@@ -1,6 +1,6 @@
-package interfaces;
+package teame.services;
 
-import models.Location;
+import teame.models.Location;
 
 /**
  * Interface for the resource that will get the location data from a given panel ID

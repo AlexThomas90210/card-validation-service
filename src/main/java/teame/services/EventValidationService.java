@@ -1,10 +1,9 @@
-package services;
+package teame.services;
 
-import interfaces.IEventValidationService;
-import interfaces.ILocationAnalyser;
-import models.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import teame.models.*;
 import org.springframework.stereotype.Service;
-import repositories.EventRepository;
+import teame.repositories.EventRepository;
 
 import java.util.Date;
 
@@ -37,7 +36,7 @@ public class EventValidationService implements IEventValidationService {
         Location location = cardReaderLocationService.getLocationFromPanelID(request.getPanelId());
 
         // Get the most recent event for that event ID
-        Event previousEvent = eventRepository.findFirstByCardId(request.getCardId());
+        Event previousEvent = eventRepository.findFirstByCardIdOrderByTimestampDesc(request.getCardId());
 
         // Create the current Compare geolocation
         Event currentEvent = new Event(request.getPanelId(), request.getCardId(), request.getAccessAllowed(), timestamp, location);

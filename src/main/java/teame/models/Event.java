@@ -1,17 +1,28 @@
-package models;
+package teame.models;
 
-import javax.persistence.Entity;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import javax.persistence.*;
 
 /**
  * Class for the events & associated information that the system handles
  */
 @Entity
 public class Event {
+    @Id
+    @GeneratedValue(strategy=GenerationType.AUTO)
+    @JsonIgnore
+    private Long id;
     private String panelId;
     private String cardId;
     private Boolean accessAllowed;
     private long timestamp;
+    @Embedded
     private Location location;
+
+    protected Event() {
+
+    }
 
     public Event(String panelId, String cardId, Boolean accessAllowed, long timestamp, Location location){
         this.panelId = panelId;
@@ -59,5 +70,13 @@ public class Event {
 
     public void setLocation(Location location) {
         this.location = location;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 }

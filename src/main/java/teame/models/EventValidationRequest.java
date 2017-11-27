@@ -1,7 +1,7 @@
-package models;
+package teame.models;
 
 /**
- * Class representing the put Event request
+ * Class representing the put Event.java request
  */
 public class EventValidationRequest {
     private Boolean accessAllowed;

@@ -1,12 +1,11 @@
-package controllers;
+package teame.controllers;
 
-import interfaces.IEventValidationService;
-import interfaces.IPanelEventController;
-import models.EventValidationRequest;
-import models.EventValidationResponse;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import teame.services.IEventValidationService;
+import teame.models.EventValidationRequest;
+import teame.models.EventValidationResponse;
 
 /**
  * Rest Controller implementation for the Panel API
