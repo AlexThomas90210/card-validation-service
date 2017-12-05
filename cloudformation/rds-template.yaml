@@ -1,0 +1,193 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Master stack: ./master-template.yaml'
+
+Parameters:
+  VPC:
+    Description: VPC To make the Beanstalk Application
+    Type: AWS::EC2::VPC::Id
+  Subnets:
+    Description: Subnets for the ELB and EC2 Instances, 3 are required
+    Type: List<AWS::EC2::Subnet::Id>
+  WebServerSecurityGroup:
+    Description: Security Group ID which will be allowed to connect to the database
+    Type: AWS::EC2::SecurityGroup::Id
+  RDSSnapShot:
+    Description: Optional Snapshot Identifier for RDS Instance, leave it blank to
+      create a fresh RDS Instance
+    Type: String
+    Default: ''
+  RDSStorageSize:
+    Description: Gigabytes for the SSD
+    Type: Number
+    ConstraintDescription: The ammount of gigabytes for the SSD
+    Default: '20'
+  RDSInstanceClass:
+    Description: The size of the DB instance
+    Type: String
+    AllowedValues:
+    - db.t2.nano
+    - db.t2.micro
+    - db.t2.small
+    - db.t2.medium
+    - db.t2.large
+    - db.m4.large
+    - db.m4.xlarge
+    - db.m4.2xlarge
+    - db.m4.4xlarge
+    - db.m4.10xlarge
+    - db.m3.medium
+    - db.m3.large
+    - db.m3.xlarge
+    - db.m3.2xlarge
+    - db.r3.large
+    - db.r3.xlarge
+    - db.r3.2xlarge
+    - db.r3.4xlarge
+    - db.r3.8xlarge
+    ConstraintDescription: example db.t2.micro
+    Default: db.t2.micro
+  RDSDBEngine:
+    Description: Engine for the database
+    Type: String
+    AllowedValues:
+    - mysql
+    - mariadb
+    - oracle-se1
+    - oracle-se2
+    - oracle-se
+    - oracle-ee
+    - sqlserver-ee
+    - sqlserver-se
+    - sqlserver-ex
+    - sqlserver-web
+    - postgres
+    - aurora
+    ConstraintDescription: mysql etc
+    Default: mysql
+  RDSDBEngineVersion:
+    Description: Version of the engine, For older versions, edit template, also check
+      if newer versions are available
+    Type: String
+    AllowedValues:
+      - Aurora-5.6.10a
+      - MySQL-5.7.17
+      - MySQL-5.7.10
+      - MySQL-5.6.29
+      - MariaDB-10.1.16
+      - MariaDB-10.1.14
+      - MariaDB-10.0.24
+      - PostGreSQL-9.6.1
+      - PostGreSQL-9.5.4
+      - PostGreSQL-9.4.9
+      - No-Oracle-in-Template-Yet,INVALID
+      - No-Microsoft-SQL-In-Template-Yet,INVALID
+    ConstraintDescription: Must be one of the above which matches to mapping
+    Default: MySQL-5.7.17
+  RDSDBName:
+    Description: Name of database
+    Type: String
+    ConstraintDescription: Any Name
+    Default: cfdb
+  RDSDBMasterUserName:
+    Description: Master Username for the database
+    Type: String
+    ConstraintDescription: Master Username
+    Default: MainUser
+  RDSDBMasterPassword:
+    Description: Password for master user
+    Type: String
+    ConstraintDescription: Password
+    Default: ACj&za14};En~K-
+  RDSMultiAZ:
+    Description: Use a Multi Availability Zone RDS instance
+    Type: String
+    AllowedValues:
+      - 'True'
+      - 'False'
+    ConstraintDescription: True or False
+    Default: 'False'
+
+Conditions:
+  UseDBSnapshot: !Not [ !Equals [ !Ref RDSSnapShot, '']]
+
+Mappings:
+  DatabaseEngineMap:
+    Aurora-5.6.10a:
+      EngineNumber: 5.6.10a
+    MySQL-5.7.17:
+      EngineNumber: 5.7.17
+    MySQL-5.7.10:
+      EngineNumber: 5.7.10
+    MySQL-5.6.29:
+      EngineNumber: 5.6.29
+    MariaDB-10.1.16:
+      EngineNumber: 10.1.16
+    MariaDB-10.1.14:
+      EngineNumber: 10.1.14
+    MariaDB-10.0.24:
+      EngineNumber: 10.0.24
+    PostGreSQL-9.6.1:
+      EngineNumber: 9.6.1
+    PostGreSQL-9.5.4:
+      EngineNumber: 9.5.4
+    PostGreSQL-9.4.9:
+      EngineNumber: 9.4.9
+    INVALID-No-Oracle-in-Template-Yet:
+      EngineNumber: error
+    INVALID-No-Microsoft-SQL-In-Template-Yet:
+      EngineNumber: error
+
+Resources:
+  RDSInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    Properties:
+      AllocatedStorage: !Ref RDSStorageSize
+      AllowMajorVersionUpgrade: 'false'
+      AutoMinorVersionUpgrade: 'true'
+      BackupRetentionPeriod: '14'
+      CopyTagsToSnapshot: 'true'
+      DBInstanceClass: !Ref RDSInstanceClass
+      DBName: !If [ UseDBSnapshot, !Ref "AWS::NoValue", !Ref RDSDBName]
+      DBSnapshotIdentifier: !If [ UseDBSnapshot, !Ref RDSSnapShot, !Ref "AWS::NoValue"]
+      DBSubnetGroupName: !Ref RDSSubnetGroup
+      Engine: !Ref RDSDBEngine
+      EngineVersion: !FindInMap [DatabaseEngineMap, !Ref RDSDBEngineVersion, EngineNumber]
+      MasterUsername: !Ref RDSDBMasterUserName
+      MasterUserPassword: !Ref RDSDBMasterPassword
+      MultiAZ: !Ref RDSMultiAZ
+      PreferredBackupWindow: 03:30-04:00
+      PreferredMaintenanceWindow: Tue:04:00-Tue:05:00
+      StorageType: gp2
+      VPCSecurityGroups:
+        - !Ref DatabaseSecurityGroup
+
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow access to DB only from the Web Tier
+      VpcId: !Ref VPC
+
+  IngresForRDSFromWebTier:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref DatabaseSecurityGroup
+      SourceSecurityGroupId: !Ref WebServerSecurityGroup
+      ToPort: '3306'
+      FromPort: '3306'
+      IpProtocol: tcp
+
+  RDSSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Private Subnet for RDS instances
+      SubnetIds: !Ref Subnets
+
+Outputs:
+  RDSInstance:
+    Description: RDS Instance that was created
+    Value: !Ref RDSInstance
+  Username:
+  Password:
+  DBName:

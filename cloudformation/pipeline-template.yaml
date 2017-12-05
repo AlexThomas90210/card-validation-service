@@ -1,0 +1,258 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template to create a CodePipeline resource which builds from a Github repo and builds it in CodeBuild, then pushes it to an ElaticBeanstalk App'
+
+Parameters:
+  ElasticBeanstalkApplication:
+    Description: The ElasticBeanstalk Application which CodePipeline will deploy too
+    Type: String
+  ElasticBeanstalkEnvironment:
+    Description: The ElasticBeanstalk Environment which CodePipeline will deploy too
+    Type: String
+  GitHubOAuth:
+    Description: The admin OAuth token of the repo for the Pipeline to use
+    Type: String
+    Default: xxxxxxxxxxx
+  GitHubOwner:
+    Description: The owner of the GitHub Repo
+    Type: String
+    Default: AlexThomas90210
+  GitHubRepo:
+    Description: The name of the repo
+    Type: String
+    Default: aws-java-cloudformation-build
+  GitHubBranch:
+    Description: The Branch to build and deploy in the repo
+    Type: String
+    Default: master
+
+Resources:
+  # S3 Bucket where CodePipeline will store artifacts between stages
+  S3ArtifactBucket:
+    Type: "AWS::S3::Bucket"
+    # Properties:
+      # Leave BucketName blank for CF to auto generate the name making the template reusable
+      # BucketName: String
+      # Tags:
+      #   - Resource Tag
+
+
+  # Main CodePipeline used for the template
+  Pipeline:
+    Type: "AWS::CodePipeline::Pipeline"
+    Properties:
+      ArtifactStore:
+        Location: !Ref S3ArtifactBucket
+        Type: S3
+      Name: Pipeline
+      RestartExecutionOnUpdate: true
+      # Todo, should put in a wait condition also for each resource to be created before creating the role
+      RoleArn: !GetAtt CodePipelineRole.Arn
+      Stages:
+      - Name: Source
+        Actions:
+          # Source Stage
+          - ActionTypeId:
+              Category: Source
+              Owner: ThirdParty
+              Provider: GitHub
+              Version: "1"
+            Configuration:
+              Owner: !Ref GitHubOwner
+              Repo: !Ref GitHubRepo
+              Branch: !Ref GitHubBranch
+              OAuthToken: !Ref GitHubOAuth
+              PollForSourceChanges: true
+            Name: GitHubSourceAction
+            OutputArtifacts:
+              - Name: SourceArtifact
+            # RoleArn: String
+            # RunOrder: Integer
+
+        # Test Stage
+      - Name: Test
+        Actions:
+          - ActionTypeId:
+              Category: Test
+              Owner: AWS
+              Provider: CodeBuild
+              Version: "1"
+            Configuration:
+              ProjectName: !Ref CodeBuildProject
+            Name: BuildandTest
+            InputArtifacts:
+              - Name: SourceArtifact
+            OutputArtifacts:
+              - Name: BuildAndTestedArtifact
+            # RoleArn: String
+            # RunOrder: Integer
+
+        # Deploy Stage
+      - Name: Deploy
+        Actions:
+          - ActionTypeId:
+              Category: Deploy
+              Owner: AWS
+              Provider: ElasticBeanstalk
+              Version: "1"
+            Configuration:
+              ApplicationName : !Ref ElasticBeanstalkApplication
+              EnvironmentName : !Ref ElasticBeanstalkEnvironment
+            Name: DeployAction
+            InputArtifacts:
+              - Name: BuildAndTestedArtifact
+            # RoleArn: String
+            # RunOrder: Integer
+
+  CodeBuildProject:
+    Type: "AWS::CodeBuild::Project"
+    Properties:
+      Artifacts:
+        Type: CODEPIPELINE
+      Description: Build and Test stage for the CodePipeline project
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        # EnvironmentVariables:
+        #   - EnvironmentVariables
+        Image: "aws/codebuild/java:openjdk-8"
+        PrivilegedMode: false
+        Type: LINUX_CONTAINER
+      Name: GitHub-CodeBuild
+      ServiceRole: !Ref CodeBuildRole
+      Source:
+        Type: CODEPIPELINE
+      # Tags:
+      #   - Resource Tag
+      TimeoutInMinutes: 20
+
+  # --- Roles & Policies ----
+  CodePipelineRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "codepipeline.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+
+  CodePipelinePolicy:
+    Type: "AWS::IAM::Policy"
+    Properties:
+      PolicyName: "codepipeline-policy"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action:
+              - "logs:CreateLogGroup"
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
+              - "logs:*"
+            Resource: "*"
+          - Effect: "Allow"
+            Action:
+              - "s3:*"
+            Resource: "*"
+          - Effect: "Allow"
+            Action:
+              - "s3:CreateBucket"
+            Resource: "*"
+          - Effect: "Allow"
+            Action:
+              - "codebuild:StartBuild"
+              - "codebuild:BatchGetBuilds"
+              - "codebuild:StopBuild"
+            Resource: "*"
+          - Effect: "Allow"
+            Action:
+               - "autoscaling:DescribeAutoScalingGroups"
+               - "autoscaling:DescribeLaunchConfigurations"
+               - "autoscaling:DescribeScalingActivities"
+               - "autoscaling:ResumeProcesses"
+               - "autoscaling:SuspendProcesses"
+               - "ec2:Describe*"
+            Resource: "*"
+          - Effect: Allow
+            Action:
+              - "elasticbeanstalk:*"
+              - "ec2:*"
+              - "elasticloadbalancing:*"
+              - "autoscaling:*"
+              - "cloudwatch:*"
+              - "s3:*"
+              - "sns:*"
+              - "cloudformation:*"
+              - "rds:*"
+              - "sqs:*"
+              - "ecs:*"
+              - "iam:PassRole"
+            Resource: "*"
+          - Effect: "Allow"
+            Action:
+               - "autoscaling:DescribeAutoScalingGroups"
+               - "autoscaling:DescribeLaunchConfigurations"
+               - "autoscaling:DescribeScalingActivities"
+               - "autoscaling:ResumeProcesses"
+               - "autoscaling:SuspendProcesses"
+               - "ec2:Describe*"
+            Resource: "*"
+          - Effect: "Allow"
+            Action:
+              - "cloudformation:GetTemplate"
+              - "cloudformation:ListStackResources"
+              - "cloudformation:UpdateStack"
+              - "cloudformation:DescribeStack*"
+            Resource: "arn:aws:cloudformation:*"
+          - Effect: "Allow"
+            Action:
+              - "elasticbeanstalk:*"
+            Resource:
+              - "arn:aws:elasticbeanstalk:*"
+      Roles:
+        - !Ref CodePipelineRole
+
+  CodeBuildRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "codebuild.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+
+  CodeBuildPolicy:
+    Type: "AWS::IAM::Policy"
+    Properties:
+      PolicyName: "codebuild-policy"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action:
+              - "logs:CreateLogGroup"
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
+            Resource: "*"
+          - Effect: "Allow"
+            Action:
+              - "s3:PutObject"
+              - "s3:GetObject"
+              - "s3:GetObjectVersion"
+            Resource: "*"
+      Roles:
+        - !Ref CodeBuildRole
+
+# Outputs:
+#   OutputName:
+#     Description: OutputDescription
+#     Value: OutputValue

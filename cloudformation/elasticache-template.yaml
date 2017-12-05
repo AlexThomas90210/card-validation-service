@@ -1,0 +1,98 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'ElastiCache stack'
+
+Parameters:
+  VPC:
+    Description: VPC To make the Beanstalk Application
+    Type: AWS::EC2::VPC::Id
+  Subnets:
+    Description: Subnets for the ELB and EC2 Instances, 3 are required
+    Type: List<AWS::EC2::Subnet::Id>
+  WebServerSecurityGroup:
+    Description: Security Group ID which will be allowed to connect to the cluster
+    Type: AWS::EC2::SecurityGroup::Id
+  ElastiCacheNodeType:
+    Description: Node type for the ElasticCache instances
+    Type: String
+    AllowedValues:
+      - cache.t2.micro
+      - cache.t2.small
+      - cache.t2.medium
+      - cache.m3.medium
+      - cache.m3.large
+      - cache.m3.xlarge
+      - cache.m3.2xlarge
+      - cache.m4.large
+      - cache.m4.xlarge
+      - cache.m4.2xlarge
+      - cache.m4.4xlarge
+      - cache.m4.10xlarge
+      - cache.r3.large
+      - cache.r3.xlarge
+      - cache.r3.2xlarge
+      - cache.r3.4xlarge
+      - cache.r3.8xlarge
+    ConstraintDescription: 'Enter the Instance type of the Cache Node, Eg: cache.t2.micro or cache.t2.small'
+    Default: cache.t2.micro
+  ElastiCacheNodeEngine:
+    Description: Cache Node Engine
+    Type: String
+    AllowedValues:
+      - redis
+      - memcached
+    Default: memcached
+  ElastiCacheNodeNumber:
+    Description: Number of Cache nodes in cluster
+    Type: Number
+    ConstraintDescription: Must be a number
+    Default: '1'
+
+Resources:
+  ElasticacheCluster:
+    Type: AWS::ElastiCache::CacheCluster
+    Properties:
+      AutoMinorVersionUpgrade: 'true'
+      CacheNodeType: !Ref ElastiCacheNodeType
+      CacheSubnetGroupName: !Ref ElastiCacheSubnetGroup
+      Engine: !Ref ElastiCacheNodeEngine
+      NumCacheNodes: !Ref ElastiCacheNodeNumber
+      PreferredMaintenanceWindow: Tue:03:30-Tue:04:30
+      VpcSecurityGroupIds:
+        - !Ref ElastiCacheSecurityGroup
+
+  ElastiCacheSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow access to Cache Cluster only from Web Tier
+      SecurityGroupIngress: []
+      VpcId: !Ref VPC
+
+  IngresForElastiCacheFromWebTier:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref ElastiCacheSecurityGroup
+      SourceSecurityGroupId: !Ref WebServerSecurityGroup
+      ToPort: '11211'
+      FromPort: '11211'
+      IpProtocol: tcp
+
+  ElastiCacheSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      Description: Private Subnet group for Elasticache Cluster
+      SubnetIds: !Ref Subnets
+
+Outputs:
+  ElastiCacheCluster:
+    Description: Cluster created by the stack
+    Value: !Ref ElasticacheCluster
+  ElastiCacheSecurityGroup:
+    Description: Cluster created by the stack
+    Value: !Ref ElastiCacheSecurityGroup
+  ElastiCacheClusterConfigurationEndpoint:
+    Description: Configuration endpoint of the cache cluster
+    Value: !GetAtt ElasticacheCluster.ConfigurationEndpoint.Address
+  ElastiCacheClusterConfigurationPort:
+    Description: Configuration Port of the cache cluster
+    Value: !GetAtt ElasticacheCluster.ConfigurationEndpoint.Port

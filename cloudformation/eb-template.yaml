@@ -1,0 +1,362 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Master stack: PathToMasterStackFile'
+
+Parameters:
+  VPC:
+    Description: VPC To make the Beanstalk Application
+    Type: AWS::EC2::VPC::Id
+  Subnets:
+    Description: Subnets for the ELB and EC2 Instances, 3 are required
+    Type: List<AWS::EC2::Subnet::Id>
+  KeyPairName:
+    Description: SSH Keypair for instances
+    Type: AWS::EC2::KeyPair::KeyName
+  AutoScalingMin:
+    Description: Minimum amount of instances running in environment
+    Type: Number
+    Default: 1
+  AutoScalingMax:
+    Description: Minimum amount of instances running in environment
+    Type: Number
+    Default: 4
+  EC2InstanceType:
+    Description: The type of EC2 Instance such as t2.micro
+    Type: String
+    AllowedValues:
+    - t2.nano
+    - t2.micro
+    - t2.small
+    - t2.medium
+    - t2.large
+    - t2.xlarge
+    - t2.2xlarge
+    - t2.large
+    - t2.large
+    - m4.large
+    - m4.xlarge
+    - m4.2xlarge
+    - m4.4xlarge
+    - m4.8xlarge
+    - m4.16xlarge
+    - m3.medium
+    - m3.large
+    - m3.xlarge
+    - m3.2xlarge
+    - c4.large
+    - c4.xlarge
+    - c4.2xlarge
+    - c4.4xlarge
+    - c4.8xlarge
+    - c3.large
+    - c3.xlarge
+    - c3.2xlarge
+    - c3.4xlarge
+    - c3.8xlarge
+    - x1.x16large
+    - x1.x32large
+    - r4.large
+    - r4.xlarge
+    - r4.2xlarge
+    - r4.4xlarge
+    - r4.8xlarge
+    - r4.x16large
+    - r3.large
+    - r3.xlarge
+    - r3.2xlarge
+    - r3.4xlarge
+    - r3.8xlarge
+    - p2.xlarge
+    - p2.8xlarge
+    - p2.16xlarge
+    - g2.2xlarge
+    - g2.8xlarge
+    - f1.2xlarge
+    - f1.16xlarge
+    - i2.xlarge
+    - i2.2xlarge
+    - i2.4xlarge
+    - i2.8xlarge
+    - d2.xlarge
+    - d2.2xlarge
+    - d2.4xlarge
+    - d2.8xlarge
+    Default: t2.micro
+  EBSSHLocation:
+    Description: allowed SSH ip address for security group
+    Type: String
+    Default: 188.141.45.141/32
+  EBHealthCheckPath:
+    Description: ELB Health check path to check for healthy instances
+    Type: String
+    Default: '/'
+  SNSEmailNotifications:
+    Description: Email to send elasticbeanstalk notifications too
+    Type: String
+    Default: "alex.thomas@mycit.ie"
+  RootVolumeSize:
+    Description: Root volume size for ec2 instances
+    Type: String
+    Default: 10
+
+Resources:
+  ElasticBeanstalkApplication:
+    Type: AWS::ElasticBeanstalk::Application
+    Properties:
+      Description: AWS Elastic Beanstalk Sample Application
+  ElasticBeanstalkEnvironment:
+    Type: AWS::ElasticBeanstalk::Environment
+    Properties:
+      ApplicationName:
+        Ref: ElasticBeanstalkApplication
+      Description: AWS ElasticBeanstalk Sample Environment
+      # EnvironmentName: !Join ["-", [!Ref "AWS::StackName", Environment]]
+      SolutionStackName: 64bit Amazon Linux 2017.09 v2.6.0 running Java 8
+      Tier:
+        Name: WebServer
+        Type: Standard
+      OptionSettings:
+        - Namespace: aws:autoscaling:asg
+          OptionName: MinSize
+          Value: !Ref AutoScalingMin
+        - Namespace: aws:autoscaling:asg
+          OptionName: MaxSize
+          Value: !Ref AutoScalingMax
+        - Namespace: aws:autoscaling:launchconfiguration
+          OptionName: EC2KeyName
+          Value: !Ref KeyPairName
+        - Namespace: aws:autoscaling:launchconfiguration
+          OptionName: InstanceType
+          Value: !Ref EC2InstanceType
+        - Namespace: aws:autoscaling:launchconfiguration
+          OptionName: IamInstanceProfile
+          Value: !Ref IamInstanceProfile
+        - Namespace: aws:autoscaling:launchconfiguration
+          OptionName: SecurityGroups
+          Value: !Ref WebServerSecurityGroup
+        - Namespace: aws:autoscaling:launchconfiguration
+          OptionName: RootVolumeType
+          Value: gp2
+        - Namespace: aws:autoscaling:launchconfiguration
+          OptionName: RootVolumeSize
+          Value: !Ref RootVolumeSize
+        - Namespace: aws:autoscaling:launchconfiguration
+          OptionName: SSHSourceRestriction
+          Value: !Join ['', ['tcp, 22, 22, ', !Ref EBSSHLocation]]
+        - Namespace: aws:autoscaling:trigger
+          OptionName: MeasureName
+          Value: CPUUtilization
+        - Namespace: aws:autoscaling:trigger
+          OptionName: Statistic
+          Value: Average
+        - Namespace: aws:autoscaling:trigger
+          OptionName: Unit
+          Value: Percent
+        - Namespace: aws:autoscaling:trigger
+          OptionName: LowerThreshold
+          Value: '10'
+        - Namespace: aws:autoscaling:trigger
+          OptionName: UpperThreshold
+          Value: '70'
+        - Namespace: aws:ec2:vpc
+          OptionName: VPCId
+          Value: !Ref VPC
+        - Namespace: aws:ec2:vpc
+          OptionName: Subnets
+          Value: !Join [',', !Ref Subnets]
+        - Namespace: aws:ec2:vpc
+          OptionName: ELBSubnets
+          Value: !Join [',', !Ref Subnets]
+        - Namespace: aws:ec2:vpc
+          OptionName: AssociatePublicIpAddress
+          Value: 'true'
+        - Namespace: aws:autoscaling:updatepolicy:rollingupdate
+          OptionName: RollingUpdateEnabled
+          Value: 'true'
+        - Namespace: aws:elb:loadbalancer
+          OptionName: CrossZone
+          Value: 'true'
+        - Namespace: aws:elb:loadbalancer
+          OptionName: SecurityGroups
+          Value: !Ref LoadBalancerSecurityGroup
+        - Namespace: aws:elb:loadbalancer
+          OptionName: ManagedSecurityGroup
+          Value: !Ref LoadBalancerSecurityGroup
+        - Namespace: aws:elasticbeanstalk:application
+          OptionName: Application Healthcheck URL
+          Value: !Ref EBHealthCheckPath
+        - Namespace: aws:elasticbeanstalk:sns:topics
+          OptionName: Notification Endpoint
+          Value: !Ref SNSEmailNotifications
+        - Namespace: aws:elasticbeanstalk:cloudwatch:logs
+          OptionName: StreamLogs
+          Value: 'true'
+        - Namespace: aws:elasticbeanstalk:managedactions
+          OptionName: ManagedActionsEnabled
+          Value: 'true'
+        - Namespace: aws:elasticbeanstalk:managedactions
+          OptionName: PreferredStartTime
+          Value: Wed:03:00
+        - Namespace: aws:elasticbeanstalk:managedactions:platformupdate
+          OptionName: UpdateLevel
+          Value: minor
+        - Namespace: aws:elasticbeanstalk:healthreporting:system
+          OptionName: SystemType
+          Value: enhanced
+        - Namespace: aws:elasticbeanstalk:environment
+          OptionName: ServiceRole
+          Value: !Ref EBServiceRole
+        # Envrionment Variables
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: SERVER_PORT
+          Value: 5000
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: SPRING_DATASOURCE_URL
+          Value: !Ref DatabaseURL
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: SPRING_DATASOURCE_USERNAME
+          Value: !Ref DatabaseUsername
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: SPRING_DATASOURCE_PASSWORD
+          Value: !Ref DatabasePassword
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: SPRING_JPA_HIBERNATE_DDL-AUTO
+          Value: update
+
+  WebServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable HTTP access via port 80 locked down to the load balancer
+        + SSH access
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref VPC
+
+  LoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable HTTP access via port 80 locked down to the load balancer
+        + SSH access
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref VPC
+
+  EBServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - elasticbeanstalk.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSElasticBeanstalkEnhancedHealth
+        - arn:aws:iam::aws:policy/service-role/AWSElasticBeanstalkService
+      RoleName: !Join ["-", [!Ref "AWS::StackName", EBService]]
+
+  IamInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+      - Ref: Ec2IamRole
+  Ec2IamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+      RoleName: !Join ["-", [!Ref "AWS::StackName", Ec2WebRole]]
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Network
+        Parameters:
+          - VPC
+          - Subnets
+          - EBSSHLocation
+      - Label:
+          default: Instances
+        Parameters:
+          - KeyPairName
+          - EC2InstanceType
+          - RootVolumeSize
+      - Label:
+          default: Auto Scalling
+        Parameters:
+          - AutoScalingMin
+          - AutoScalingMax
+      - Label:
+          default: Elastic Beanstalk
+        Parameters:
+          - EBHealthCheckPath
+          - SNSEmailNotifications
+    ParameterLabels:
+      VPC:
+        default: "VPC"
+      Subnets:
+        default: "Subnets"
+      KeyPairName:
+        default: "Key Pair"
+      AutoScalingMin:
+        default: "Minimum Instances"
+      AutoScalingMax:
+        default: "Maximum Instances"
+      EC2InstanceType:
+        default: "Instance Type"
+      EBSSHLocation:
+        default: "SSH IP Address"
+      EBHealthCheckPath:
+        default: "Health Check Path"
+      SNSEmailNotifications:
+        default: "Notifications Email"
+      RootVolumeSize:
+        default: "Root Volume Size"
+
+Outputs:
+  ElasticBeanstalkApplication:
+    Description: Elastic Beanstalk application created by the stack
+    Value: !Ref ElasticBeanstalkApplication
+  ElasticBeanstalkEnvironment:
+    Description: Reference to the Environment created by the stack
+    Value: !Ref ElasticBeanstalkEnvironment
+  ElasticBeanstalkLoadBalancerURL:
+    Description: Load Balancer URL of the environment
+    Value: !GetAtt ElasticBeanstalkEnvironment.EndpointURL
+  Ec2SecurityGroup:
+    Description: Security Group used by the EC2 Instances
+    Value: !Ref WebServerSecurityGroup
+  ELBSecurityGroup:
+    Description: Security Group used by the load balancer
+    Value: !Ref LoadBalancerSecurityGroup
