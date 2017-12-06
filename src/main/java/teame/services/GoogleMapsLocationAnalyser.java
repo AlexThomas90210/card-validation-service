@@ -75,7 +75,7 @@ public class GoogleMapsLocationAnalyser implements ILocationAnalyser {
     }
 
     private LocationAnalysisResult generateAnalysis(Duration duration,long millisecondsBetweenEvents){
-        String reasonState = "Minimum time to travel is roughly" + duration.humanReadable + ".  " + duration.inSeconds + " seconds exactly. The time difference between events is " + millisecondsBetweenEvents/1000 + " seconds";
+        String reasonState = "Minimum time to travel is roughly " + duration.humanReadable + ".  " + duration.inSeconds + " seconds exactly. The time difference between events is " + millisecondsBetweenEvents/1000 + " seconds";
         if (duration.inSeconds * 1000 < millisecondsBetweenEvents){
             // Valid
             return new LocationAnalysisResult(true, "It is humanly possible to travel that distance. " + reasonState);
