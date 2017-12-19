@@ -6,6 +6,10 @@ Parameters:
   EBKeyPair:
     Description: SSH Keypair for instances
     Type: AWS::EC2::KeyPair::KeyName
+    Default: newacc-keypair
+  GithubToken:
+    Description: Github Oauth token for codepipeline to poll github repo
+    Type: String
 
 Resources:
   VpcStack:
@@ -13,6 +17,14 @@ Resources:
     Properties:
       TemplateURL: ./vpc-template.yaml
       TimeoutInMinutes: '30'
+
+  SecurityGroupStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./securitygroup-template.yaml
+      TimeoutInMinutes: '30'
+      Parameters:
+        VPC: !GetAtt VpcStack.Outputs.VPC
 
   RdsStack:
     Type: AWS::CloudFormation::Stack
@@ -22,7 +34,7 @@ Resources:
       Parameters:
         VPC: !GetAtt VpcStack.Outputs.VPC
         Subnets: !GetAtt VpcStack.Outputs.PrivateSubnets
-        WebServerSecurityGroup: !GetAtt EbStack.Outputs.Ec2SecurityGroup
+        WebServerSecurityGroup: !GetAtt SecurityGroupStack.Outputs.WebServerSecurityGroup
 
   EbStack:
     Type: AWS::CloudFormation::Stack
@@ -32,11 +44,11 @@ Resources:
       Parameters:
         VPC: !GetAtt VpcStack.Outputs.VPC
         Subnets: !GetAtt VpcStack.Outputs.PublicSubnets
+        WebServerSecurityGroup: !GetAtt SecurityGroupStack.Outputs.WebServerSecurityGroup
         KeyPairName: !Ref EBKeyPair
-        EnvironmentDatabaseURL: !GetAtt RdsStack.Outputs.URL
-        EnvironmentDatabaseUsername: !GetAtt RdsStack.Outputs.Username
-        EnvironmentDatabasePassword: !GetAtt RdsStack.Outputs.Password
-        EnvironmentDatabaseDBName: !GetAtt RdsStack.Outputs.DBName
+        SPRINGDATASOURCEURL: !GetAtt RdsStack.Outputs.URL
+        SPRINGDATASOURCEUSERNAME: !GetAtt RdsStack.Outputs.Username
+        SPRINGDATASOURCEPASSWORD: !GetAtt RdsStack.Outputs.Password
 
   # ElastiCache stack, not implemented yet
 #  ElastiCacheStack:
@@ -57,6 +69,7 @@ Resources:
       Parameters:
         ElasticBeanstalkApplication: !GetAtt EbStack.Outputs.ElasticBeanstalkApplication
         ElasticBeanstalkEnvironment: !GetAtt EbStack.Outputs.ElasticBeanstalkEnvironment
+        GitHubOAuth: !Ref GithubToken
 
   # DnsStack:
   #   Type: AWS::CloudFormation::Stack

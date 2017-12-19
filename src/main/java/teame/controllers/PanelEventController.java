@@ -1,6 +1,7 @@
 package teame.controllers;
 
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import teame.services.IEventValidationService;
@@ -19,7 +20,7 @@ public class PanelEventController implements IPanelEventController {
         this.eventValidationService = eventValidationService;
     }
 
-    @RequestMapping("api/panel/request")
+    @RequestMapping(value = "api/panel/request", method = RequestMethod.GET)
     public EventValidationResponse validateRequest(
             @RequestParam(value = "panelid", required = true) String panelid,
             @RequestParam(value = "cardid", required = true) String cardid,

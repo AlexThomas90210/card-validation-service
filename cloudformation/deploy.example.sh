@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 # Package the application
 aws cloudformation package \
    --template-file ./master-template.yaml \

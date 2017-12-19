@@ -21,4 +21,4 @@ phases:
 artifacts:
   type: zip
   files:
-    - target/output.jar
+    - target/teame-1.0-SNAPSHOT.jar

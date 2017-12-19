@@ -20,7 +20,7 @@ Parameters:
   GitHubRepo:
     Description: The name of the repo
     Type: String
-    Default: aws-java-cloudformation-build
+    Default: card-validation-service
   GitHubBranch:
     Description: The Branch to build and deploy in the repo
     Type: String

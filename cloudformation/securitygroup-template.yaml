@@ -1,0 +1,30 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Security groups for the template, made in this template to remove circular dependence between resources'
+
+Parameters:
+  VPC:
+    Description: VPC To make the Beanstalk Application
+    Type: AWS::EC2::VPC::Id
+
+Resources:
+  WebServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable HTTP access via port 80 locked down to the load balancer
+        + SSH access
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref VPC
+
+Outputs:
+  WebServerSecurityGroup:
+    Description: Security Group used by the EC2 Instances
+    Value: !Ref WebServerSecurityGroup

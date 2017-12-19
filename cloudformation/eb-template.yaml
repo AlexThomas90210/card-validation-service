@@ -3,6 +3,18 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Master stack: PathToMasterStackFile'
 
 Parameters:
+  SPRINGDATASOURCEURL:
+      Description: URL for spring data to use
+      Type: String
+  SPRINGDATASOURCEUSERNAME:
+      Description: Username for spring data to use
+      Type: String
+  SPRINGDATASOURCEPASSWORD:
+      Description: Password for spring data to use
+      Type: String
+  WebServerSecurityGroup:
+    Description: Security group for the web server instances
+    Type: AWS::EC2::SecurityGroup::Id
   VPC:
     Description: VPC To make the Beanstalk Application
     Type: AWS::EC2::VPC::Id
@@ -212,32 +224,16 @@ Resources:
           Value: 5000
         - Namespace: aws:elasticbeanstalk:application:environment
           OptionName: SPRING_DATASOURCE_URL
-          Value: !Ref DatabaseURL
+          Value: !Ref SPRINGDATASOURCEURL
         - Namespace: aws:elasticbeanstalk:application:environment
           OptionName: SPRING_DATASOURCE_USERNAME
-          Value: !Ref DatabaseUsername
+          Value: !Ref SPRINGDATASOURCEUSERNAME
         - Namespace: aws:elasticbeanstalk:application:environment
           OptionName: SPRING_DATASOURCE_PASSWORD
-          Value: !Ref DatabasePassword
+          Value: !Ref SPRINGDATASOURCEPASSWORD
         - Namespace: aws:elasticbeanstalk:application:environment
           OptionName: SPRING_JPA_HIBERNATE_DDL-AUTO
           Value: update
-
-  WebServerSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Enable HTTP access via port 80 locked down to the load balancer
-        + SSH access
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: '80'
-          ToPort: '80'
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: '443'
-          ToPort: '443'
-          CidrIp: 0.0.0.0/0
-      VpcId: !Ref VPC
 
   LoadBalancerSecurityGroup:
     Type: AWS::EC2::SecurityGroup

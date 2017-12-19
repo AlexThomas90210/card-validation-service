@@ -98,7 +98,7 @@ Parameters:
     Description: Password for master user
     Type: String
     ConstraintDescription: Password
-    Default: ACj&za14};En~K-
+    Default: SuperSecretPassword
   RDSMultiAZ:
     Description: Use a Multi Availability Zone RDS instance
     Type: String
@@ -189,5 +189,14 @@ Outputs:
     Description: RDS Instance that was created
     Value: !Ref RDSInstance
   Username:
+    Description: Username for DB
+    Value: !Ref RDSDBMasterUserName
   Password:
+    Description: Password for DB
+    Value: !Ref RDSDBMasterPassword
   DBName:
+    Description: Name of Databse
+    Value: !Ref RDSDBName
+  URL:
+    Description: URL for the database
+    Value: !GetAtt RDSInstance.Endpoint.Address
