@@ -3,6 +3,7 @@ package teame.services;
 import com.google.maps.DistanceMatrixApi;
 import com.google.maps.GeoApiContext;
 import com.google.maps.model.*;
+import org.springframework.cache.annotation.Cacheable;
 import teame.models.Coordinates;
 import teame.models.Event;
 import teame.models.LocationAnalysisResult;
@@ -41,26 +42,7 @@ public class GoogleMapsLocationAnalyser implements ILocationAnalyser {
         Duration duration = null;
         if ( distance > 0 && distance < simulateFlightTreshold) {
             // Make Google Matrix Request
-            DistanceMatrix matrix = null;
-            try {
-                matrix = DistanceMatrixApi.newRequest(context)
-                        .origins(originLatLng)
-                        .destinations(destinationLatLng)
-                        .await();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-            // Get the minimum amount of seconds it could take to travel that calculateDistance
-            long minimumSecondsAllowed = 999999999;
-            for (DistanceMatrixRow row : matrix.rows){
-                for (DistanceMatrixElement element : row.elements){
-                    if (element.duration != null && element.duration.inSeconds < minimumSecondsAllowed){
-                        minimumSecondsAllowed = element.duration.inSeconds;
-                        duration = element.duration;
-                    }
-                }
-            }
+            duration = getDurationBetweenLatLongFromGoogleMaps(originLatLng, destinationLatLng);
         }
 
         if (duration == null){
@@ -72,6 +54,35 @@ public class GoogleMapsLocationAnalyser implements ILocationAnalyser {
         addDurationTimeForEventAltitude(currentEvent.getLocation().getAltitude(),previousEvent.getLocation().getAltitude(), duration);
 
         return generateAnalysis(duration, timeDifferenceBetweenEvents);
+    }
+
+    @Cacheable("durations")
+    public Duration getDurationBetweenLatLongFromGoogleMaps(LatLng originLatLng, LatLng destinationLatLng){
+        Duration duration = null;
+        // Make Google Matrix Request
+        DistanceMatrix matrix = null;
+        try {
+            matrix = DistanceMatrixApi.newRequest(context)
+                    .origins(originLatLng)
+                    .destinations(destinationLatLng)
+                    .await();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return duration;
+        }
+
+        // Get the minimum amount of seconds it could take to travel that calculateDistance
+        long minimumSecondsAllowed = 999999999;
+        for (DistanceMatrixRow row : matrix.rows){
+            for (DistanceMatrixElement element : row.elements){
+                if (element.duration != null && element.duration.inSeconds < minimumSecondsAllowed){
+                    minimumSecondsAllowed = element.duration.inSeconds;
+                    duration = element.duration;
+                }
+            }
+        }
+
+        return duration;
     }
 
     private LocationAnalysisResult generateAnalysis(Duration duration,long millisecondsBetweenEvents){
@@ -99,7 +110,7 @@ public class GoogleMapsLocationAnalyser implements ILocationAnalyser {
         duration.inSeconds += additionalSeconds;
     }
 
-    //    Code to calculate calculateDistance from 2 LatLngs from stack overflow: https://stackoverflow.com/questions/3694380/calculating-distance-between-two-points-using-latitude-longitude-what-am-i-doi
+    // Code to calculate calculateDistance from 2 LatLngs from stack overflow: https://stackoverflow.com/questions/3694380/calculating-distance-between-two-points-using-latitude-longitude-what-am-i-doi
     private double calculateDistance(LatLng origin, LatLng destination, char unit) {
         double theta = origin.lng - destination.lng;
         double dist = Math.sin(deg2rad(origin.lat)) * Math.sin(deg2rad(destination.lat)) + Math.cos(deg2rad(origin.lat)) * Math.cos(deg2rad(destination.lat)) * Math.cos(deg2rad(theta));

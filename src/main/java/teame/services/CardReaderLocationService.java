@@ -1,5 +1,6 @@
 package teame.services;
 
+import org.springframework.cache.annotation.Cacheable;
 import teame.models.Location;
 import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -20,6 +21,7 @@ public class CardReaderLocationService implements ICardReaderLocationService {
 
     }
 
+    @Cacheable("panel-location")
     public Location getLocationFromPanelID(String panelId) {
         try {
             String rawJson = getDataFromExternalCardReaderService(panelId);
