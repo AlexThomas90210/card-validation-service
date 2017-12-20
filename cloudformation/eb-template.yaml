@@ -12,6 +12,9 @@ Parameters:
   SPRINGDATASOURCEPASSWORD:
       Description: Password for spring data to use
       Type: String
+  DatabaseName:
+    Description: Dabase name
+    Type: String
   WebServerSecurityGroup:
     Description: Security group for the web server instances
     Type: AWS::EC2::SecurityGroup::Id
@@ -97,11 +100,11 @@ Parameters:
   EBSSHLocation:
     Description: allowed SSH ip address for security group
     Type: String
-    Default: 188.141.45.141/32
+    Default: 79.97.78.27/32
   EBHealthCheckPath:
     Description: ELB Health check path to check for healthy instances
     Type: String
-    Default: '/'
+    Default: '/swagger-ui.html'
   SNSEmailNotifications:
     Description: Email to send elasticbeanstalk notifications too
     Type: String
@@ -224,7 +227,7 @@ Resources:
           Value: 5000
         - Namespace: aws:elasticbeanstalk:application:environment
           OptionName: SPRING_DATASOURCE_URL
-          Value: !Ref SPRINGDATASOURCEURL
+          Value: !Join [ "", [ "jdbc:mysql://", !Ref SPRINGDATASOURCEURL, ":3306/", !Ref DatabaseName] ]
         - Namespace: aws:elasticbeanstalk:application:environment
           OptionName: SPRING_DATASOURCE_USERNAME
           Value: !Ref SPRINGDATASOURCEUSERNAME
@@ -232,7 +235,10 @@ Resources:
           OptionName: SPRING_DATASOURCE_PASSWORD
           Value: !Ref SPRINGDATASOURCEPASSWORD
         - Namespace: aws:elasticbeanstalk:application:environment
-          OptionName: SPRING_JPA_HIBERNATE_DDL-AUTO
+          OptionName: SPRING_JPA_HIBERNATE_DDL_AUTO
+          Value: update
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: org.hibernate.dialect.MySQL5Dialect
           Value: update
 
   LoadBalancerSecurityGroup:

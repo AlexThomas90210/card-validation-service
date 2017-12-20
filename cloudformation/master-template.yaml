@@ -36,6 +36,16 @@ Resources:
         Subnets: !GetAtt VpcStack.Outputs.PrivateSubnets
         WebServerSecurityGroup: !GetAtt SecurityGroupStack.Outputs.WebServerSecurityGroup
 
+  ElastiCacheStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./elasticache-template.yaml
+      TimeoutInMinutes: '30'
+      Parameters:
+        VPC: !GetAtt VpcStack.Outputs.VPC
+        Subnets: !GetAtt VpcStack.Outputs.PrivateSubnets
+        WebServerSecurityGroup: !GetAtt SecurityGroupStack.Outputs.WebServerSecurityGroup
+
   EbStack:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -46,20 +56,11 @@ Resources:
         Subnets: !GetAtt VpcStack.Outputs.PublicSubnets
         WebServerSecurityGroup: !GetAtt SecurityGroupStack.Outputs.WebServerSecurityGroup
         KeyPairName: !Ref EBKeyPair
+        DatabaseName: !GetAtt RdsStack.Outputs.DBName
         SPRINGDATASOURCEURL: !GetAtt RdsStack.Outputs.URL
         SPRINGDATASOURCEUSERNAME: !GetAtt RdsStack.Outputs.Username
         SPRINGDATASOURCEPASSWORD: !GetAtt RdsStack.Outputs.Password
-
-  # ElastiCache stack, not implemented yet
-#  ElastiCacheStack:
-#    Type: AWS::CloudFormation::Stack
-#    Properties:
-#      TemplateURL: ./elasticache-template.yaml
-#      TimeoutInMinutes: '30'
-#      Parameters:
-#        VPC: !GetAtt VpcStack.Outputs.VPC
-#        Subnets: !GetAtt VpcStack.Outputs.PrivateSubnets
-#        WebServerSecurityGroup: !GetAtt EbStack.Outputs.Ec2SecurityGroup
+        SpringElastiCacheURL: !GetAtt ElastiCacheStack.Outputs.ElastiCacheClusterConfigurationEndpoint
 
   PipelineStack:
     Type: AWS::CloudFormation::Stack

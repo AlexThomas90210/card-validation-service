@@ -7,7 +7,7 @@ Parameters:
     Description: VPC To make the Beanstalk Application
     Type: AWS::EC2::VPC::Id
   Subnets:
-    Description: Subnets for the ELB and EC2 Instances, 3 are required
+    Description: Subnets for the ElastiCache Instances, 3 are required
     Type: List<AWS::EC2::Subnet::Id>
   WebServerSecurityGroup:
     Description: Security Group ID which will be allowed to connect to the cluster
