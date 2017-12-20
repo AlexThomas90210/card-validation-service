@@ -1,0 +1,12 @@
+packages:
+  yum:
+    epel-release: []
+    mosquitto: []
+
+commands:
+  1startMosquitto:
+    command: sudo systemctl start mosquitto
+    ignoreErrors: true
+  2enableMosquitto:
+    command: sudo systemctl enable mosquitto
+    ignoreErrors: true

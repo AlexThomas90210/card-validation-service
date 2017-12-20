@@ -15,6 +15,9 @@ Parameters:
   DatabaseName:
     Description: Dabase name
     Type: String
+  SpringElastiCacheURL:
+    Description: URL for the elasticache server
+    Type: String
   WebServerSecurityGroup:
     Description: Security group for the web server instances
     Type: AWS::EC2::SecurityGroup::Id
