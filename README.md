@@ -98,9 +98,9 @@ is detecting cloned cards
 ## Infrastructure Implementation
 #### CloudFormation ( Infrastructure as Code )
 The infrastructure is hosted on AWS and makes use to CloudFormation to automate the provisioning of infrastructure.
-All the CloudFormation templates are in the directory cloudformation/ . In there, there is multiple stacks
-which automates the provisioning and deployment of services needed to run the system and a deploy.example.sh script
-which can be executed on your account with placeholders for variables to fill in for anyone who wants to run the system 
+All the CloudFormation templates are in the directory cloudformation/ . In there, there is a master-template.yaml file which 
+is the master stack that calls multiple smaller stacks which automates the provisioning and deployment of services needed to run the system.
+A deploy.example.sh script which can be executed on your account with placeholders for variables to fill in for anyone who wants to run the system 
 on their AWS account in 1 click.
 
 Note that to run the CloudFormation stack you will need to create a keypair in your account to have SSH access to the web
@@ -133,6 +133,6 @@ and creates the cluster in the private subnets and creates the security groups t
 #### Code Pipeline, CodeBuild ( CI/CD )
 The pipeline-template.yaml file creates a CI/CD pipeline using AWS CodePipeline and AWS CodeBuild. It takes a github OAuth
 token to give it access to the github profile hosting the repository it polls its source code from. When a new commit is detected
-from the GitHub Repo is pulls the code and sends it to a CodeBuild Project. CodeBuild then builds the source code using the
+from the GitHub Repo it pulls the code and sends it to a CodeBuild Project. CodeBuild then builds the source code using the
 buildspec.yml file in the repo. Runs the Test and if the tests pass, it returns the artifact to CodePipeline which then deploys the
 built & tested artifact to ElasticBeanstalk running the AutoScaling environment
