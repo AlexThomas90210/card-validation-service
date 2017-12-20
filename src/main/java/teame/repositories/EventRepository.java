@@ -10,6 +10,5 @@ import org.springframework.data.repository.CrudRepository;
  */
 @Repository
 public interface EventRepository extends CrudRepository<Event, Long> {
-    @Cacheable("Events")
     Event findFirstByCardIdOrderByTimestampDesc(String cardId);
 }
