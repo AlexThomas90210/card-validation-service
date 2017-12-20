@@ -19,12 +19,21 @@ import org.springframework.stereotype.Service;
 public class GoogleMapsLocationAnalyser implements ILocationAnalyser {
     private final String API_KEY = "AIzaSyDbAIn0TvxAGCZhO4DpdXPuXSwDWFjI7a4";
     private GeoApiContext context;
+    // Google API does not allow flight simulation so we are using a threshold if a distance is greater than a certain amount in km,
+    // we will simulate flight travel ourselves
     private Integer simulateFlightTreshold = 500;
 
     public GoogleMapsLocationAnalyser(){
         this.context = new GeoApiContext.Builder().apiKey(this.API_KEY).build();
     }
 
+    /**
+     * Checks if its humanly possible for somebody to have generated the 2 events
+     *
+     * @param currentEvent The first event created by that card id
+     * @param previousEvent The second event created by that card id
+     * @return The analysis result
+     */
     @Override
     public LocationAnalysisResult checkIsHumanlyPossible(Event currentEvent, Event previousEvent) {
         if (previousEvent == null) {
@@ -40,6 +49,7 @@ public class GoogleMapsLocationAnalyser implements ILocationAnalyser {
         long timeDifferenceBetweenEvents = (currentEvent.getTimestamp() - previousEvent.getTimestamp());
 
         Duration duration = null;
+        // If the distance between events is 0 and less than the simulateFlightThreshold the use the Google Maps API
         if ( distance > 0 && distance < simulateFlightTreshold) {
             // Make Google Matrix Request
             duration = getDurationBetweenLatLongFromGoogleMaps(originLatLng, destinationLatLng);
@@ -47,6 +57,7 @@ public class GoogleMapsLocationAnalyser implements ILocationAnalyser {
 
         if (duration == null){
             // The duration will be null if Google maps cannot find a route between the locations without using a flight,
+            // as google maps does not allow flight travel in its API for some reason :(
             // Therefore we simulate a flight for the distance calculated between the events
             duration = simulateFlightDuration(distance);
         }
@@ -56,6 +67,13 @@ public class GoogleMapsLocationAnalyser implements ILocationAnalyser {
         return generateAnalysis(duration, timeDifferenceBetweenEvents);
     }
 
+    /**
+     * Calls the GoogleMaps API and gets a estimated Duration for those locations
+     *
+     * @param originLatLng The origin location
+     * @param destinationLatLng The second Location
+     * @return The estimated duration to travel between those 2 locations. It will be null if Google thinks its only possible using flight
+     */
     @Cacheable("durations")
     public Duration getDurationBetweenLatLongFromGoogleMaps(LatLng originLatLng, LatLng destinationLatLng){
         Duration duration = null;
@@ -85,6 +103,13 @@ public class GoogleMapsLocationAnalyser implements ILocationAnalyser {
         return duration;
     }
 
+    /**
+     * Creates the the LocationAnalysisResult from an estimated duration and time difference between events
+     *
+     * @param duration The estimated travel duration time
+     * @param millisecondsBetweenEvents The miliseconds between the 2 events
+     * @return The location analysis results
+     */
     private LocationAnalysisResult generateAnalysis(Duration duration,long millisecondsBetweenEvents){
         String reasonState = "Minimum time to travel is roughly " + duration.humanReadable + ".  " + duration.inSeconds + " seconds exactly. The time difference between events is " + millisecondsBetweenEvents/1000 + " seconds";
         if (duration.inSeconds * 1000 < millisecondsBetweenEvents){
@@ -96,6 +121,12 @@ public class GoogleMapsLocationAnalyser implements ILocationAnalyser {
         }
     }
 
+    /**
+     * Creates a duration from a distance by simulating  a flight as Google API does not support flights
+     *
+     * @param distance The distance to travel
+     * @return The duration it would take to travel that distance on a plane
+     */
     private Duration simulateFlightDuration(double distance){
         double timeInHours = distance/700;
         Duration duration = new Duration();
@@ -104,6 +135,13 @@ public class GoogleMapsLocationAnalyser implements ILocationAnalyser {
         return duration;
     }
 
+    /**
+     * Adds time to a duration based on the difference in altitudes
+     *
+     * @param altitude1 altitude of first event
+     * @param altitude2 altitude of second event
+     * @param duration The duration to increase
+     */
     private void addDurationTimeForEventAltitude(Double altitude1, Double altitude2, Duration duration){
         Double delta = Math.abs(altitude1 - altitude2);
         long additionalSeconds = (long) (delta * 2);

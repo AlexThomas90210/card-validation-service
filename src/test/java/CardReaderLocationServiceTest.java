@@ -5,6 +5,9 @@ import teame.services.CardReaderLocationService;
 import static org.junit.Assert.assertEquals;
 
 public class CardReaderLocationServiceTest {
+    /**
+     * Test if the external panel location service is returning a valid Location given a panel ID
+     */
     @Test
     public void canGetPanelIdDataFromExternalService(){
         CardReaderLocationService service = new CardReaderLocationService();

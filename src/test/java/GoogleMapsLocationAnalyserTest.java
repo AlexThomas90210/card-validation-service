@@ -9,6 +9,10 @@ import teame.services.GoogleMapsLocationAnalyser;
 import static org.junit.Assert.assertEquals;
 
 public class GoogleMapsLocationAnalyserTest {
+
+    /**
+     * Test if the location analysis from google maps implementation is valid for 2 events that are humanly possible
+     */
     @Test
     public void isHumanlyPossible(){
         GoogleMapsLocationAnalyser locationAnalyser = new GoogleMapsLocationAnalyser();
@@ -22,6 +26,9 @@ public class GoogleMapsLocationAnalyserTest {
         assertEquals(true, locationAnalsysResult.getValid());
     }
 
+    /**
+     * Test if the location analysis from google maps implementation is not valid for 2 events that are not humanly possible
+     */
     @Test
     public void isNotHumanlyPossible(){
         GoogleMapsLocationAnalyser locationAnalyser = new GoogleMapsLocationAnalyser();

@@ -21,6 +21,12 @@ public class CardReaderLocationService implements ICardReaderLocationService {
 
     }
 
+    /**
+     * Gets a Location from a panel ID
+     *
+     * @param panelId The panel ID we want the location for
+     * @return The Location of that panel
+     */
     @Cacheable("panel-location")
     public Location getLocationFromPanelID(String panelId) {
         try {
@@ -32,6 +38,13 @@ public class CardReaderLocationService implements ICardReaderLocationService {
         return null;
     }
 
+    /**
+     * Implements calling the external service
+     *
+     * @param panelId The panel ID we want the location for
+     * @return JSON String representation of the Location
+     * @throws Exception
+     */
     private String getDataFromExternalCardReaderService(String panelId) throws Exception{
         URL url = new URL("http://uuidlocator.cfapps.io/api/panels/" + panelId);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -47,6 +60,13 @@ public class CardReaderLocationService implements ICardReaderLocationService {
         return data;
     }
 
+    /**
+     * Maps JSON to a Location Model
+     *
+     * @param json
+     * @return
+     * @throws IOException
+     */
     private Location mapJsonToLocation(String json) throws IOException {
         ObjectMapper objectMapper = new ObjectMapper();
         Location location = objectMapper.readValue(json, Location.class);

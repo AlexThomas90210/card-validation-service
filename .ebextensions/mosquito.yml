@@ -1,14 +1,9 @@
-packages:
-  yum:
-    epel-release: []
-    mosquitto: []
-
 commands:
   1startMosquitto:
     #Update the list of repositories with one containing Mosquitto
     command: sudo wget http://download.opensuse.org/repositories/home:/oojah:/mqtt/CentOS_CentOS-7/home:oojah:mqtt.repo -O /etc/yum.repos.d/mqtt.repo
     ignoreErrors: true
-  2enableMosquitto:
+  2installMosquitto:
     #Install Mosquitto broker and Mosquitto command line tools
     command: sudo yum install mosquitto mosquitto-clients
     ignoreErrors: true
@@ -17,5 +12,5 @@ commands:
     command: sudo mosquitto -c /etc/mosquitto/conf.d/bridge.conf –d
     ignoreErrors: true
   4EnableMosquitto:
-    command: sudo chkconfig --level 345 scriptname on
+    command: sudo chkconfig --level 345 mosquitto on
     ignoreErrors: true
